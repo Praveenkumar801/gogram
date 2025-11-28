@@ -157,7 +157,12 @@ func (a *albumBox) WaitAndTrigger(d *UpdateDispatcher, c *Client) {
 
 	d.RLock()
 	albumHandles := make(map[int][]*albumHandle)
-	maps.Copy(albumHandles, d.albumHandles)
+	for k, v := range d.albumHandles {
+		// Deep copy the slice to prevent race conditions
+		handlers := make([]*albumHandle, len(v))
+		copy(handlers, v)
+		albumHandles[k] = handlers
+	}
 	d.RUnlock()
 
 	for gp, handlers := range albumHandles {
