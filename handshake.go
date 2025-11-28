@@ -34,10 +34,6 @@ func (m *MTProto) makeTempAuthKey(expiresIn int32) error {
 	return m.makeAuthKeyWithRetries(expiresIn, 0)
 }
 
-func (m *MTProto) makeAuthKeyInternal(expiresIn int32) error {
-	return m.makeAuthKeyWithRetries(expiresIn, 0)
-}
-
 const maxAuthKeyRetries = 3
 
 func (m *MTProto) makeAuthKeyWithRetries(expiresIn int32, retryCount int) error {

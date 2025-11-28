@@ -164,7 +164,7 @@ func NewMTProto(c Config) (*MTProto, error) {
 			// check if have write permission in the directory
 			f, openErr := os.OpenFile(filepath.Dir(c.AuthKeyFile), os.O_WRONLY, 0222)
 			if openErr != nil {
-				return nil, fmt.Errorf("check if you have write permission in the directory: %w", err)
+				return nil, fmt.Errorf("check if you have write permission in the directory: %w", openErr)
 			}
 			f.Close()
 			return nil, fmt.Errorf("loading session: %w", err)
