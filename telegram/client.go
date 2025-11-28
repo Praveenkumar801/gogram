@@ -58,6 +58,7 @@ type Client struct {
 	dispatcher   *UpdateDispatcher
 	wg           sync.WaitGroup
 	stopCh       chan struct{}
+	stopChMu     sync.Mutex
 	exSenders    *ExSenders
 	exportedKeys map[int]*AuthExportedAuthorization
 	Log          Logger
@@ -403,7 +404,7 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	c.stopCh = make(chan struct{}) // reset the stop channel
+	c.resetStopChannel()
 	return nil
 }
 
@@ -415,8 +416,25 @@ func (c *Client) St() error {
 		}
 	}
 
-	c.stopCh = make(chan struct{}) // reset the stop channel
+	c.resetStopChannel()
 	return nil
+}
+
+// resetStopChannel safely resets the stop channel for reuse
+func (c *Client) resetStopChannel() {
+	c.stopChMu.Lock()
+	defer c.stopChMu.Unlock()
+
+	// Check if channel needs to be closed
+	if c.stopCh != nil {
+		select {
+		case <-c.stopCh:
+			// Channel already closed
+		default:
+			close(c.stopCh)
+		}
+	}
+	c.stopCh = make(chan struct{})
 }
 
 // Returns true if the client is authorized as a user or a bot
@@ -524,7 +542,7 @@ func (es *ExSenders) cleanupIdleSenders() {
 
 	for _, senders := range es.senders {
 		for i, sender := range senders {
-			if time.Since(sender.GetLastUsedTime()) > 30*time.Minute {
+			if sender != nil && time.Since(sender.GetLastUsedTime()) > 30*time.Minute {
 				sender.Terminate()
 				senders[i] = nil
 			}

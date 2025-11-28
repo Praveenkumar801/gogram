@@ -125,9 +125,19 @@ func (s *SyncIntObjectChan) Close() {
 }
 
 func CloseChannelWithoutPanic(c chan tl.Object) {
+	if c == nil {
+		return
+	}
 	defer func() {
+		// Only recover from "close of closed channel" panic
 		if r := recover(); r != nil {
-			close(c)
+			if str, ok := r.(string); ok && str == "close of closed channel" {
+				// Expected panic from closing already closed channel, ignore
+				return
+			}
+			// Re-panic for unexpected panics
+			panic(r)
 		}
 	}()
+	close(c)
 }

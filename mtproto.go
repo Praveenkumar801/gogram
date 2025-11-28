@@ -162,9 +162,11 @@ func NewMTProto(c Config) (*MTProto, error) {
 			// if the error is not because of file not found or path not found, return the error
 			// else, continue with the execution
 			// check if have write permission in the directory
-			if _, err := os.OpenFile(filepath.Dir(c.AuthKeyFile), os.O_WRONLY, 0222); err != nil {
-				return nil, fmt.Errorf("check if you have write permission in the directory: %w", err)
+			f, openErr := os.OpenFile(filepath.Dir(c.AuthKeyFile), os.O_WRONLY, 0222)
+			if openErr != nil {
+				return nil, fmt.Errorf("check if you have write permission in the directory: %w", openErr)
 			}
+			f.Close()
 			return nil, fmt.Errorf("loading session: %w", err)
 		}
 	}
@@ -1166,7 +1168,7 @@ func (m *MTProto) notifyPendingRequestsOfConfigChange() {
 			respChannelsBackup.Delete(k)
 			select {
 			case v <- &errorSessionConfigsChanged{}:
-			case <-time.After(1 * time.Millisecond):
+			case <-time.After(100 * time.Millisecond):
 			}
 		}
 	}
