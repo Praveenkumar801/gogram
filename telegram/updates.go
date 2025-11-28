@@ -155,7 +155,12 @@ type albumBox struct {
 func (a *albumBox) WaitAndTrigger(d *UpdateDispatcher, c *Client) {
 	time.Sleep(time.Duration(c.clientData.albumWaitTime) * time.Millisecond)
 
-	for gp, handlers := range d.albumHandles {
+	d.RLock()
+	albumHandles := make(map[int][]*albumHandle)
+	maps.Copy(albumHandles, d.albumHandles)
+	d.RUnlock()
+
+	for gp, handlers := range albumHandles {
 		for _, handler := range handlers {
 			handle := func(h *albumHandle) error {
 				sort.SliceStable(a.messages, func(i, j int) bool {
@@ -947,11 +952,6 @@ func (c *Client) handleRawUpdate(update Update) {
 
 	for group, handlers := range rawHandles {
 		for _, handler := range handlers {
-			defer func() {
-				if r := recover(); r != nil {
-					c.Log.Error(fmt.Sprintf("[RawUpdateHandlerPanic] Recovered from panic: %v | Update details: %+v", r, update))
-				}
-			}()
 			if handler == nil || handler.Handler == nil {
 				continue
 			}

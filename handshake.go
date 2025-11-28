@@ -24,17 +24,27 @@ import (
 
 // https://core.telegram.org/mtproto/auth_key
 func (m *MTProto) makeAuthKey() error {
-	return m.makeAuthKeyInternal(0)
+	return m.makeAuthKeyWithRetries(0, 0)
 }
 
 func (m *MTProto) makeTempAuthKey(expiresIn int32) error {
 	if expiresIn <= 0 {
 		expiresIn = 24 * 60 * 60
 	}
-	return m.makeAuthKeyInternal(expiresIn)
+	return m.makeAuthKeyWithRetries(expiresIn, 0)
 }
 
 func (m *MTProto) makeAuthKeyInternal(expiresIn int32) error {
+	return m.makeAuthKeyWithRetries(expiresIn, 0)
+}
+
+const maxAuthKeyRetries = 3
+
+func (m *MTProto) makeAuthKeyWithRetries(expiresIn int32, retryCount int) error {
+	if retryCount >= maxAuthKeyRetries {
+		return fmt.Errorf("auth key generation failed after %d retries", maxAuthKeyRetries)
+	}
+
 	isTemp := expiresIn > 0
 
 	m.serviceModeActivated = true
@@ -147,7 +157,7 @@ nonceCreate:
 	decodedMessage, err := ige.DecryptMessageWithTempKeys(dhParams.EncryptedAnswer, nonceSecond.Int, nonceServer.Int)
 	if err != nil {
 		m.Logger.WithError(err).Debug("decrypt failed - retrying auth key generation")
-		return m.makeAuthKeyInternal(expiresIn)
+		return m.makeAuthKeyWithRetries(expiresIn, retryCount+1)
 	}
 
 	data, err := tl.DecodeUnknownObject(decodedMessage)

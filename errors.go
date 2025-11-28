@@ -103,7 +103,8 @@ func TryExpandError(errStr string) (nativeErrorName string, additionalData any) 
 		additionalData = trimmedData
 
 	default:
-		panic("couldn't parse this type: " + v.String())
+		log.Printf("unexpected type in error parsing: %s", v.String())
+		return errStr, nil
 	}
 
 	return nativeErrorName, additionalData

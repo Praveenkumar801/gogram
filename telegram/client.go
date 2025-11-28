@@ -403,7 +403,17 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	c.stopCh = make(chan struct{}) // reset the stop channel
+	// Safely reset stop channel
+	select {
+	case <-c.stopCh:
+		// Channel was closed, create new one
+	default:
+		// Channel is open, close it first if not nil
+		if c.stopCh != nil {
+			close(c.stopCh)
+		}
+	}
+	c.stopCh = make(chan struct{})
 	return nil
 }
 
@@ -415,7 +425,17 @@ func (c *Client) St() error {
 		}
 	}
 
-	c.stopCh = make(chan struct{}) // reset the stop channel
+	// Safely reset stop channel
+	select {
+	case <-c.stopCh:
+		// Channel was closed, create new one
+	default:
+		// Channel is open, close it first if not nil
+		if c.stopCh != nil {
+			close(c.stopCh)
+		}
+	}
+	c.stopCh = make(chan struct{})
 	return nil
 }
 
@@ -524,7 +544,7 @@ func (es *ExSenders) cleanupIdleSenders() {
 
 	for _, senders := range es.senders {
 		for i, sender := range senders {
-			if time.Since(sender.GetLastUsedTime()) > 30*time.Minute {
+			if sender != nil && time.Since(sender.GetLastUsedTime()) > 30*time.Minute {
 				sender.Terminate()
 				senders[i] = nil
 			}
