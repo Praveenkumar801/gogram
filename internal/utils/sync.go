@@ -129,8 +129,14 @@ func CloseChannelWithoutPanic(c chan tl.Object) {
 		return
 	}
 	defer func() {
-		// Recover from panic if channel is already closed
-		recover()
+		// Only recover from "close of closed channel" panic, not other panics
+		if r := recover(); r != nil {
+			// Check if it's a channel close panic (typically a string "close of closed channel")
+			if _, ok := r.(string); !ok {
+				// Re-panic if it's not a string (unexpected panic type)
+				panic(r)
+			}
+		}
 	}()
 	close(c)
 }
